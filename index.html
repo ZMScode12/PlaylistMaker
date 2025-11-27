@@ -1,35 +1,313 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>SIAY Site</title>
-    <style>
-      body {
-        background-color: #750808ff;
-        color: darkred;
-        text-align: center;
-        font-family: Arial, sans-serif;
+<head>
+  <title>Mood Playlist Generator 🎵</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #1DB954, #191414);
+      min-height: 100vh;
+      margin: 0;
+      padding: 40px 20px;
+      color: white;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      opacity: 0.8;
+      margin-bottom: 30px;
+    }
+
+    .input-section {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 30px;
+      border-radius: 16px;
+      margin-bottom: 30px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 15px;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+      resize: none;
+      height: 100px;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background: #1DB954;
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      font-size: 18px;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    button:hover {
+      background: #1ed760;
+      transform: scale(1.05);
+    }
+
+    .results {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 30px;
+      border-radius: 16px;
+      display: none;
+    }
+
+    .results.show {
+      display: block;
+    }
+
+    .mood-detected {
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      padding: 10px;
+      background: rgba(29, 185, 84, 0.3);
+      border-radius: 10px;
+    }
+
+    .song-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .song-item {
+      background: rgba(255, 255, 255, 0.1);
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-align: left;
+    }
+
+    .song-info {
+      flex: 1;
+    }
+
+    .song-title {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    .song-artist {
+      opacity: 0.7;
+      font-size: 0.9rem;
+    }
+
+    .spotify-link {
+      background: #1DB954;
+      color: white;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+
+    .spotify-link:hover {
+      background: #1ed760;
+    }
+
+    .no-match {
+      opacity: 0.8;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎵 Mood Playlist</h1>
+    <p class="subtitle">Tell us how you're feeling and we'll find the perfect songs</p>
+
+    <div class="input-section">
+      <textarea id="moodInput" placeholder="How are you feeling right now? (e.g., 'I'm feeling stressed and need to relax' or 'I'm so happy today!')"></textarea>
+      <button onclick="getSongs()">Get Songs 🎧</button>
+    </div>
+
+    <div class="results" id="results">
+      <div class="mood-detected" id="moodDetected"></div>
+      <ul class="song-list" id="songList"></ul>
+    </div>
+  </div>
+
+  <script>
+    // Mood keywords and their associated songs
+    const moodData = {
+      happy: {
+        keywords: ['happy', 'excited', 'great', 'amazing', 'wonderful', 'fantastic', 'joy', 'joyful', 'good', 'awesome', 'celebrating', 'celebrate', 'pumped', 'thrilled'],
+        songs: [
+          { title: "Happy", artist: "Pharrell Williams", spotifyId: "60nZcImufyMA1MKQY3dcCH" },
+          { title: "Good as Hell", artist: "Lizzo", spotifyId: "6KgBpzTuTRPebChN0VTyzV" },
+          { title: "Walking on Sunshine", artist: "Katrina and The Waves", spotifyId: "05wIrZSwuaVWhcv5FfqeH0" },
+          { title: "Can't Stop the Feeling", artist: "Justin Timberlake", spotifyId: "1WkMMavIMc4JZ8cfMmxHkI" },
+          { title: "Uptown Funk", artist: "Bruno Mars", spotifyId: "32OlwWuMpZ6b0aN2RZOeMS" }
+        ]
+      },
+      sad: {
+        keywords: ['sad', 'down', 'depressed', 'upset', 'crying', 'heartbroken', 'lonely', 'alone', 'miserable', 'hurt', 'broken', 'unhappy', 'blue', 'gloomy'],
+        songs: [
+          { title: "Someone Like You", artist: "Adele", spotifyId: "1zwMYTA5nlNjZxYrvBB2pV" },
+          { title: "Fix You", artist: "Coldplay", spotifyId: "7LVHVU3tWfcxj5aiPFEW4Q" },
+          { title: "Let Her Go", artist: "Passenger", spotifyId: "2oeGPUmI09k9xzGhzgLvPA" },
+          { title: "Say Something", artist: "A Great Big World", spotifyId: "5Att6ecAQ5DE9FYy9ajPFs" },
+          { title: "All By Myself", artist: "Celine Dion", spotifyId: "2PF9qVNPvJSKkiXYCKBo3M" }
+        ]
+      },
+      chill: {
+        keywords: ['chill', 'relax', 'relaxed', 'calm', 'peaceful', 'stressed', 'stress', 'anxious', 'anxiety', 'tired', 'exhausted', 'sleepy', 'mellow', 'unwind', 'rest'],
+        songs: [
+          { title: "Weightless", artist: "Marconi Union", spotifyId: "6kkwzB6hXLIONkEk9JciA6" },
+          { title: "Ocean Eyes", artist: "Billie Eilish", spotifyId: "7hDVYcQq6MxkdJGweuCtl9" },
+          { title: "Banana Pancakes", artist: "Jack Johnson", spotifyId: "5sY0kILrq0jYCuiGhDOiDt" },
+          { title: "Put Your Records On", artist: "Corinne Bailey Rae", spotifyId: "2nGFzvICaeEWjIrBrL2RAx" },
+          { title: "Here Comes the Sun", artist: "The Beatles", spotifyId: "6dGnYIeXmHdcikdzNNDMm2" }
+        ]
+      },
+      energetic: {
+        keywords: ['energetic', 'energy', 'pump', 'pumped', 'workout', 'exercise', 'running', 'gym', 'hyped', 'hype', 'motivated', 'motivation', 'powerful', 'strong', 'beast'],
+        songs: [
+          { title: "Eye of the Tiger", artist: "Survivor", spotifyId: "2HHtWyy5CgaQbC7XSoOb0e" },
+          { title: "Lose Yourself", artist: "Eminem", spotifyId: "1v7L65Lzy0j0vdpRjJewt1" },
+          { title: "Stronger", artist: "Kanye West", spotifyId: "4fzsfWzRhPawzqhX8Qt9F3" },
+          { title: "Can't Hold Us", artist: "Macklemore", spotifyId: "3bidbhpOYeV4knp8AIu8Xn" },
+          { title: "Thunder", artist: "Imagine Dragons", spotifyId: "1zB4vmk8tFRmM9UULNzbLB" }
+        ]
+      },
+      angry: {
+        keywords: ['angry', 'mad', 'furious', 'pissed', 'frustrated', 'annoyed', 'irritated', 'rage', 'hate', 'ugh', 'fed up'],
+        songs: [
+          { title: "Break Stuff", artist: "Limp Bizkit", spotifyId: "2JYvGhhdGXQMzUVTTBpdZW" },
+          { title: "In The End", artist: "Linkin Park", spotifyId: "60a0Rd6pjrkxjPbaKzXjfq" },
+          { title: "Killing In The Name", artist: "Rage Against The Machine", spotifyId: "59WN2psjkt1tyaxjspN8fp" },
+          { title: "Given Up", artist: "Linkin Park", spotifyId: "7JIuqL4ZHkpLmKwSKc7BXB" },
+          { title: "Bodies", artist: "Drowning Pool", spotifyId: "06Yt0Sd5KLKvP3nhBaVOCD" }
+        ]
+      },
+      romantic: {
+        keywords: ['love', 'romantic', 'romance', 'crush', 'girlfriend', 'boyfriend', 'date', 'dating', 'heart', 'passionate', 'loving', 'in love', 'butterflies'],
+        songs: [
+          { title: "Perfect", artist: "Ed Sheeran", spotifyId: "0tgVpDi06FyKpA1z0VMD4v" },
+          { title: "All of Me", artist: "John Legend", spotifyId: "3U4isOIWM3VvDubwSI3y7a" },
+          { title: "Thinking Out Loud", artist: "Ed Sheeran", spotifyId: "34gCuhDGsG4bRPIf9bb02f" },
+          { title: "Just the Way You Are", artist: "Bruno Mars", spotifyId: "7BqBn9nzAq8spo5e7cZ0dJ" },
+          { title: "At Last", artist: "Etta James", spotifyId: "1hBMdaLNT02EgnLIrv6Szd" }
+        ]
+      },
+      nostalgic: {
+        keywords: ['nostalgic', 'nostalgia', 'memories', 'remember', 'miss', 'missing', 'old times', 'throwback', 'past', 'childhood', 'reminisce'],
+        songs: [
+          { title: "September", artist: "Earth, Wind & Fire", spotifyId: "7Cuk8jsPPoNYQWXK9XRFvG" },
+          { title: "Mr. Brightside", artist: "The Killers", spotifyId: "003vvx7Niy0yvhvHt4a68B" },
+          { title: "Sweet Child O' Mine", artist: "Guns N' Roses", spotifyId: "7o2CTH4ctstm8TNelqjb51" },
+          { title: "Bohemian Rhapsody", artist: "Queen", spotifyId: "4u7EnebtmKWzUH433cf5Qv" },
+          { title: "Don't Stop Believin'", artist: "Journey", spotifyId: "4bHsxqR3GMrXTxEPLuK5ue" }
+        ]
+      },
+      focused: {
+        keywords: ['focus', 'focused', 'study', 'studying', 'work', 'working', 'concentrate', 'concentration', 'productive', 'productivity', 'homework', 'exam', 'finals'],
+        songs: [
+          { title: "Experience", artist: "Ludovico Einaudi", spotifyId: "1BncfTJAWxrsxyT9culBrj" },
+          { title: "Time", artist: "Hans Zimmer", spotifyId: "6ZFbXIJkuI1dVNWvzJzown" },
+          { title: "Clair de Lune", artist: "Debussy", spotifyId: "7FG9RHpkkbxucKaedlSHmI" },
+          { title: "River Flows in You", artist: "Yiruma", spotifyId: "3Ow0bokhQ8sFTYJYRnkCqE" },
+          { title: "Arrival of the Birds", artist: "The Cinematic Orchestra", spotifyId: "0xnWK1dT0kyYHtPPaK0JUj" }
+        ]
       }
-      h1 {
-        color: crimson;
+    };
+
+    function detectMood(text) {
+      text = text.toLowerCase();
+      let detectedMoods = [];
+
+      for (const [mood, data] of Object.entries(moodData)) {
+        for (const keyword of data.keywords) {
+          if (text.includes(keyword)) {
+            if (!detectedMoods.includes(mood)) {
+              detectedMoods.push(mood);
+            }
+            break;
+          }
+        }
       }
-      button {
-        background-color: white;
-        color: black;
-        border: none;
-        padding: 10px 20px;
-        font-size: 16px;
-        border-radius: 8px;
-        cursor: pointer;
+
+      return detectedMoods.length > 0 ? detectedMoods : null;
+    }
+
+    function getSongs() {
+      const input = document.getElementById('moodInput').value.trim();
+      const resultsDiv = document.getElementById('results');
+      const moodDetectedDiv = document.getElementById('moodDetected');
+      const songList = document.getElementById('songList');
+
+      if (!input) {
+        alert('Please tell us how you\'re feeling!');
+        return;
       }
-      button:hover {
-        background-color: crimson;
-        color: white;
+
+      const detectedMoods = detectMood(input);
+
+      if (!detectedMoods) {
+        resultsDiv.classList.add('show');
+        moodDetectedDiv.textContent = "🤔 We couldn't quite figure out your mood...";
+        songList.innerHTML = '<li class="no-match">Try using words like: happy, sad, stressed, energetic, romantic, angry, nostalgic, or focused!</li>';
+        return;
       }
-    </style>
-  </head>
-  <body>
-    <h1>SLAY SITE 😎</h1>
-    <p>Welcome to my first website. I edited this myself!</p>
-    <button onclick="alert('You slayed it!')">Click Me</button>
-  </body>
+
+      // Get songs from all detected moods
+      let allSongs = [];
+      detectedMoods.forEach(mood => {
+        allSongs = allSongs.concat(moodData[mood].songs);
+      });
+
+      // Shuffle and limit to 5 songs
+      allSongs = allSongs.sort(() => Math.random() - 0.5).slice(0, 5);
+
+      // Display results
+      resultsDiv.classList.add('show');
+      moodDetectedDiv.textContent = `🎯 Detected mood: ${detectedMoods.join(', ')}`;
+
+      songList.innerHTML = allSongs.map(song => `
+        <li class="song-item">
+          <div class="song-info">
+            <div class="song-title">${song.title}</div>
+            <div class="song-artist">${song.artist}</div>
+          </div>
+          <a href="https://open.spotify.com/track/${song.spotifyId}" target="_blank" class="spotify-link">Play on Spotify</a>
+        </li>
+      `).join('');
+    }
+
+    // Allow Enter key to submit
+    document.getElementById('moodInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        getSongs();
+      }
+    });
+  </script>
+</body>
 </html>
